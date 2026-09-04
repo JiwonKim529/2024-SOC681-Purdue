@@ -1,0 +1,219 @@
+---
+title: "Appendix 2. Visualization"
+output: html_notebook
+---
+# Load necessary libraries
+```{r}
+df_score <- read.csv("LIWC_scoresOnly.csv", 
+                    header = TRUE, stringsAsFactors = FALSE)
+
+print(df_score)
+```
+# Load necessary libraries
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# package to reorder factors
+library(forcats)
+
+# position labels near the points without overlap
+library(ggrepel)
+```
+
+# Convert df_score to long format, excluding 'Segment' and 'WC'
+```{r}
+df_long <- df_score %>%
+  
+  # exclude 'Segment' and 'WC(wordcount)' columns
+  select(-Segment, -WC) %>% 
+  
+  # transform all columns except 'Type' into long format
+  pivot_longer(cols = -Type, 
+               names_to = "Dictionary",
+               values_to = "Score")
+
+print(head(df_long))
+```
+
+# Reflections on confusing parts 
+
+# Calculate the differences among groups and filter out dictionaries with low scores 
+```{r}
+confusing_vis <- df_long %>%
+  filter(Type %in% c('A_group_Confusing', 'B_group_Confusing', 
+                     'C_group_Confusing')) %>%
+  group_by(Dictionary, Type) %>%
+  summarize(mean = mean(Score), 
+            se = sd(Score) / sqrt(n()), 
+            N = n(), 
+            .groups = "drop") %>%
+  
+  # reshape a dataset from long format to wide format
+  # 'Type' will be columns
+  pivot_wider(names_from = Type, values_from = mean) %>%
+  
+  # add filtering step to drop dictionaries where all scores are below 10
+ filter(`A_group_Confusing` >= 10 | `B_group_Confusing` >= 10 | 
+          `C_group_Confusing` >= 10) %>%
+  
+  # calculate the difference among three groups (variance)
+  mutate(diff = abs(`A_group_Confusing` - `B_group_Confusing`) +
+                abs(`C_group_Confusing` - `C_group_Confusing`) +
+                abs(`B_group_Confusing` - `C_group_Confusing`)) %>%
+  
+  # sort by the largest difference first
+  arrange(desc(diff))  
+```
+
+
+
+# Reorder the Dictionary terms based on the difference
+```{r}
+confusing_vis <- confusing_vis %>%
+  
+  # make the datafraeme long again
+  pivot_longer(cols = c(`A_group_Confusing`, `B_group_Confusing`, `C_group_Confusing`),
+               names_to = "Type", values_to = "mean") %>%
+  
+  # and then reorder based on the between-group variances
+  mutate(Dictionary = fct_reorder(Dictionary, diff, .desc = TRUE))  
+```
+
+# Plot the reordered data
+
+```{r}
+
+# Visualization using ggplot
+p_confusing <- confusing_vis %>%
+  
+  # `fill` sets bar colors by group
+  ggplot(aes(x = Dictionary, y = mean, color = Type)) +
+  
+  # use `geom_point` for dot plot, `position = "dodge"` for side-by-side bars
+  geom_point(position = position_dodge(width = 0.5), size = 2, alpha = 1) +   
+  
+  # color the bars based on the groups
+  scale_color_manual(name = "Group", 
+                   values = c("A_group_Confusing" = "#FF6347",
+                              "B_group_Confusing" = "#4682B4",
+                              "C_group_Confusing" = "#32CD32"),
+                   labels = c("Group A", "Group B", "Group C")) +
+  
+  # add numbers on the top of each bar
+  geom_text_repel(aes(label = round(mean, 1)), 
+                  position = position_dodge(width = 0.8),  
+                  size = 2.5,
+                  alpha = 1) + 
+  
+  # black and white theme
+  theme_bw(base_size = 16) +
+  
+  # customize axis and label
+  labs(x = "Dictionaries of LIWC-22", y = "Score (%)",
+       title = "LIWC Analysis of Student Reflections on Confusing Parts") +
+    
+  theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 8),
+        
+        # adjust the title font size
+        plot.title = element_text(size = 14),
+        
+        # adjust x,y-axis label font size
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12))
+
+
+p_confusing
+```
+
+# Reflections on interesting parts 
+
+# Calculate the differences among groups and filter out dictionaries with low scores 
+```{r}
+interesting_vis <- df_long %>%
+  filter(Type %in% c('A_group_Interesting', 'B_group_Interesting', 'C_group_Interesting')) %>%
+  group_by(Dictionary, Type) %>%
+  summarize(mean = mean(Score), 
+            se = sd(Score) / sqrt(n()), 
+            N = n(), 
+            .groups = "drop") %>%
+  
+  # reshape a dataset from long format to wide format
+  # 'Type' will be columns
+  pivot_wider(names_from = Type, values_from = mean) %>%
+  
+  # add filtering step to drop dictionaries where all scores are below 10
+ filter(`A_group_Interesting` >= 10 | `B_group_Interesting` >= 10 | 
+          `C_group_Interesting` >= 10) %>%
+  
+  # calculate the difference among three groups (variance)
+  mutate(diff = abs(`A_group_Interesting` - `B_group_Interesting`) +
+                abs(`A_group_Interesting` - `C_group_Interesting`) +
+                abs(`B_group_Interesting` - `C_group_Interesting`)) %>%
+  
+  # sort by the largest difference first
+  arrange(desc(diff))  
+```
+
+
+
+# Reorder the Dictionary terms based on the difference
+```{r}
+interesting_vis <- interesting_vis %>%
+  
+  # make the datafraeme long again
+  pivot_longer(cols = c(`A_group_Interesting`, `B_group_Interesting`, 
+                        `C_group_Interesting`),
+               names_to = "Type", values_to = "mean") %>%
+  
+  # and then reorder based on the between-group variances
+  mutate(Dictionary = fct_reorder(Dictionary, diff, .desc = TRUE))  
+```
+
+
+# Plot the reordered data
+```{r}
+
+# Visualization using ggplot
+p_interesting <- interesting_vis %>%
+  
+  # `fill` sets bar colors by group
+  ggplot(aes(x = Dictionary, y = mean, color = Type)) +
+  
+  # use `geom_point` for dot plot, `position = "dodge"` for side-by-side bars
+  geom_point(position = position_dodge(width = 0.5), size = 2, alpha = 1) +   
+  
+  # color the bars based on the groups
+  scale_color_manual(name = "Group", 
+                   values = c("A_group_Interesting" = "#FF6347",
+                              "B_group_Interesting" = "#4682B4",
+                              "C_group_Interesting" = "#32CD32"),
+                   labels = c("Group A", "Group B", "Group C")) +
+  
+  # add numbers on the top of each bar
+  geom_text_repel(aes(label = round(mean, 1)), 
+                  position = position_dodge(width = 0.8),  
+                  size = 2.5,
+                  alpha = 1) + 
+  
+  # black and white theme
+  theme_bw(base_size = 16) +
+  
+  # customize axis and label
+  labs(x = "Dictionaries of LIWC-22", y = "Score (%)",
+       title = "LIWC Analysis of Student Reflections on Interesting Parts",
+       fontsize = 8) +
+    
+  theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 8),
+        plot.title = element_text(size = 14),  # Adjust the title font size
+        axis.title.x = element_text(size = 12),  # Adjust x-axis label font size
+        axis.title.y = element_text(size = 12))
+
+
+p_interesting
+
+```
+
+
+

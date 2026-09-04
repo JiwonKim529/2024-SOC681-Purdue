@@ -1,0 +1,139 @@
+---
+title: "R Notebook Sep25"
+output: html_notebook
+---
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+# After class assignment
+
+```{r}
+install.packages("dplyr")
+```
+```{r}
+# Load necessary libraries
+library(readxl)
+library(dplyr)
+
+# Load the Excel file
+data <- read_excel("SOC681_Data_Kim.xlsx", sheet = "all")
+
+# Group by 'grade group' and combine the reflections
+combined_reflections <- data %>%
+  group_by(`grade group`) %>%
+  summarize(
+    combined_confusing = paste(na.omit(`confusing reflection`), collapse = " "),
+    combined_interesting = paste(na.omit(`interesting reflection`), collapse = " ")
+  )
+
+# Replace unwanted characters (â€™) with apostrophe (')
+combined_reflections$combined_confusing <- gsub("â€™", "'", combined_reflections$combined_confusing)
+combined_reflections$combined_interesting <- gsub("â€™", "'", combined_reflections$combined_interesting)
+
+# Replace any remaining newline characters or unwanted special characters
+combined_reflections$combined_confusing <- gsub("[\r\n]", " ", combined_reflections$combined_confusing)
+combined_reflections$combined_interesting <- gsub("[\r\n]", " ", combined_reflections$combined_interesting)
+
+# Ensure data types are character
+combined_reflections$combined_confusing <- as.character(combined_reflections$combined_confusing)
+combined_reflections$combined_interesting <- as.character(combined_reflections$combined_interesting)
+
+# View the cleaned dataframe 
+View(combined_reflections)
+
+# Export to CSV with proper handling of quotes and special characters
+write.csv(combined_reflections, "combined_reflections_clean.csv", row.names = FALSE, quote = TRUE, fileEncoding = "UTF-8")
+
+#write_xlsx(combined_reflections, "combined_reflections_clean.xlsx")
+
+```
+
+
+
+
+
+# In-class practice
+
+```{r}
+duke_web_scrape <- "Duke Experts: A Trusted Source for Policymakers\n\n\t\t\t\t\t\t\t"
+grepl("Experts", duke_web_scrape) # find specific words
+gsub("\t|\n", "", duke_web_scrape) # replace specific words with other words (or blank == delete!) # | means or
+```
+
+```{r}
+some_text <- 
+  c("Friends", "don't", "let", "friends", "make", "wordclouds")
+
+some_text[grep("^[F]", some_text)] # find words with capitalized F
+```
+
+
+# Escaping text Wrong way
+```{r}
+text_chunk <- c("[This Professor is not so Great]")
+gsub("[", "", text_chunk) # R does recognize [] as a square bracket, not a text that should be replaced. 
+```
+
+# Escaping text Right way
+```{r}
+text_chunk <- c("[This Professor is not so Great]")
+gsub("\\[|\\]", "", text_chunk) # \\ means escape
+```
+
+# Tokenization 
+## There are built-in functions for lemmatization (walk, walked, walking)
+## But you have to look into your data to see if the lemmatization were done well.
+
+
+# Group activity 
+# what kinds of dictionary available in R 
+# e.g. polarity, emotion,
+
+# Install pacakges 
+```{r}
+install.packages("tidytext")
+install.packages("dplyr")
+install.packages("ggplot2")
+install.packages("tm")
+```
+
+# Install and Load Required Libraries
+
+
+```{r}
+library(dplyr)  # For data manipulation if needed
+```
+
+```{r}
+install.packages("quanteda", dependencies=TRUE)
+```
+
+```{r}
+library(quanteda)
+```
+
+```{r}
+data <- read.csv(file = "text_data_before_analysis.csv")
+
+head(data)
+```
+# Prepare Text Data
+```{r}
+data_clean <- data %>% filter(!is.na(essay) & essay != "")
+```
+
+
+# Create a Corpus
+```{r}
+# Create a corpus from the essay column
+corpus <- corpus(data_clean$essay)
+
+# View the corpus
+summary(corpus)
+```
+
+
+
+
+

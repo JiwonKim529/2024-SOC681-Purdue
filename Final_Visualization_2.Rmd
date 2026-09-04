@@ -1,0 +1,232 @@
+---
+title: "Final_Visualization"
+output: html_notebook
+---
+# Load necessary libraries
+```{r}
+df_score <- read.csv("LIWC_scoresOnly.csv", 
+                    header = TRUE, stringsAsFactors = FALSE)
+
+print(df_score)
+```
+# Load necessary libraries
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# package to reorder factors
+library(forcats) 
+```
+
+
+# Convert df_score to long format, excluding 'Segment' and 'WC'
+```{r}
+df_long <- df_score %>%
+  
+  # exclude 'Segment' and 'WC(wordcount)' columns
+  select(-Segment, -WC) %>% 
+  
+  # transform all columns except 'Type' into long format
+  pivot_longer(cols = -Type, 
+               names_to = "Dictionary",
+               values_to = "Score")
+
+print(head(df_long))
+```
+
+# Reflections on confusing parts 
+
+# Calculate the differences among groups and filter out dictionaries with low scores 
+```{r}
+confusing_vis <- df_long %>%
+  filter(Type %in% c('Confusing (A Group)', 'Confusing (B Group)', 
+                     'Confusing (C Group)')) %>%
+  group_by(Dictionary, Type) %>%
+  summarize(mean = mean(Score), 
+            se = sd(Score) / sqrt(n()), 
+            N = n(), 
+            .groups = "drop") %>%
+  
+  # reshape a dataset from long format to wide format
+  # 'Type' will be columns
+  pivot_wider(names_from = Type, values_from = mean) %>%
+  
+  # add filtering step to drop dictionaries where all scores are below 10
+ filter(`Confusing (A Group)` >= 20 | `Confusing (B Group)` >= 20 | 
+          `Confusing (C Group)` >= 20) %>%
+  
+  # calculate the difference among three groups (variance)
+  mutate(diff = abs(`Confusing (A Group)` - `Confusing (B Group)`) +
+                abs(`Confusing (A Group)` - `Confusing (C Group)`) +
+                abs(`Confusing (B Group)` - `Confusing (C Group)`)) %>%
+  
+  # sort by the largest difference first
+  arrange(desc(diff))  
+```
+
+
+
+# Reorder the Dictionary terms based on the difference
+```{r}
+confusing_vis <- confusing_vis %>%
+  
+  # make the datafraeme long again
+  pivot_longer(cols = c(`Confusing (A Group)`, `Confusing (B Group)`, `Confusing (C Group)`),
+               names_to = "Type", values_to = "mean") %>%
+  
+  # and then reorder based on the between-group variances
+  mutate(Dictionary = fct_reorder(Dictionary, diff, .desc = TRUE))  
+```
+
+# Create two filtered datasets, one for scores under 50 and one for scores under 100
+```{r}
+confusing_vis_under_50 <- confusing_vis %>%
+  filter(mean < 50)
+
+confusing_vis_under_100 <- confusing_vis %>%
+  filter(mean < 100)
+```
+
+# Plot for scores under 50
+```{r}
+p_confusing_under_50 <- confusing_vis_under_50 %>%
+  
+  # `fill` sets bar colors by group
+  ggplot(aes(x = Dictionary, y = mean, fill = Type)) +
+  
+  # use `geom_col` for bar graph, `position = "dodge"` for side-by-side bars
+  geom_col(position = "dodge", width = 0.7) +  
+  
+  scale_fill_manual(name = "Group", 
+                    values = c("Confusing (A Group)" = "red", 
+                               "Confusing (B Group)" = "blue", 
+                               "Confusing (C Group)" = "green")) +
+  
+  # black and white theme
+  theme_bw(base_size = 16) +
+  
+  # customize axis and label
+  labs(x = "Confusing Categories", y = "Score") +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 8))
+
+print(p_confusing_un)
+```
+
+
+
+# Plot for scores under 100
+```{r}
+p_confusing_under_100 <- confusing_vis_under_100 %>%
+  ggplot(aes(x = Dictionary, y = mean, color = Type)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +  # Add points for each group
+  geom_errorbar(aes(ymin = mean - 2 * se, ymax = mean + 2 * se), width = 0.2, position = position_dodge(0.5)) +  # Scale up the error bars
+  scale_color_manual(name = "Group", values = c("Confusing (A Group)" = "red", "Confusing (B Group)" = "blue", "Confusing (C Group)" = "green")) +
+  theme_bw(base_size = 16) +
+  labs(x = "Confusing Categories (Scores under 100)", y = "Score") +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 8))
+
+print(p_confusing_under_100)
+```
+
+
+# Plot the all reordered data
+
+```{r}
+p_confusing <- confusing_vis %>%
+  
+  # `fill` sets bar colors by group
+  ggplot(aes(x = Dictionary, y = mean, fill = Type)) +
+  
+  # use `geom_col` for bar graph, `position = "dodge"` for side-by-side bars
+  geom_col(position = "dodge", width = 0.7) +  
+  
+  scale_fill_manual(name = "Group", 
+                    values = c("Confusing (A Group)" = "red", 
+                               "Confusing (B Group)" = "blue", 
+                               "Confusing (C Group)" = "green")) +
+  
+  # black and white theme
+  theme_bw(base_size = 16) +
+  
+  # customize axis and label
+  labs(x = "Confusing Categories", y = "Score") +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 8))
+
+print(p_confusing)
+```
+
+# Reflections on interesting parts 
+
+# Calculate the differences among groups and filter out dictionaries with low scores 
+```{r}
+interesting_vis <- df_long %>%
+  filter(Type %in% c('Interesting (A Group)', 'Interesting (B Group)', 'Interesting (C Group)')) %>%
+  group_by(Dictionary, Type) %>%
+  summarize(mean = mean(Score), 
+            se = sd(Score) / sqrt(n()), 
+            N = n(), 
+            .groups = "drop") %>%
+  
+  # reshape a dataset from long format to wide format
+  # 'Type' will be columns
+  pivot_wider(names_from = Type, values_from = mean) %>%
+  
+  # add filtering step to drop dictionaries where all scores are below 20
+ filter(`Interesting (A Group)` >= 20 | `Interesting (B Group)` >= 20 | 
+          `Interesting (C Group)` >= 20) %>%
+  
+  # calculate the difference among three groups (variance)
+  mutate(diff = abs(`Interesting (A Group)` - `Interesting (B Group)`) +
+                abs(`Interesting (A Group)` - `Interesting (C Group)`) +
+                abs(`Interesting (B Group)` - `Interesting (C Group)`)) %>%
+  
+  # sort by the largest difference first
+  arrange(desc(diff))  
+```
+
+
+
+# Reorder the Dictionary terms based on the difference
+```{r}
+interesting_vis <- interesting_vis %>%
+  
+  # make the datafraeme long again
+  pivot_longer(cols = c(`Interesting (A Group)`, `Interesting (B Group)`, 
+                        `Interesting (C Group)`),
+               names_to = "Type", values_to = "mean") %>%
+  
+  # and then reorder based on the between-group variances
+  mutate(Dictionary = fct_reorder(Dictionary, diff, .desc = TRUE))  
+```
+
+
+# Plot the reordered data
+```{r}
+p_interesting <- interesting_vis %>%
+  
+  # `fill` sets bar colors by group
+  ggplot(aes(x = Dictionary, y = mean, fill = Type)) +
+  
+  # use `geom_col` for bar graph, `position = "dodge"` for side-by-side bars
+  geom_col(position = "dodge", width = 0.7) +  
+  
+  scale_fill_manual(name = "Group", 
+                    values = c("Interesting (A Group)" = "red", 
+                               "Interesting (B Group)" = "blue", 
+                               "Interesting (C Group)" = "green")) +
+  
+  # black and white theme
+  theme_bw(base_size = 16) +
+  
+  # customize axis and label
+  labs(x = "Interesting", y = "Score") +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 8))
+
+print(p_interesting)
+
+```
+
+
+
+

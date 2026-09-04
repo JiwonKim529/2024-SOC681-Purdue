@@ -1,0 +1,92 @@
+---
+title: "Appendix 1. Data Preparation"
+output: pdf
+---
+# Load necessary libraries
+```{r}
+library(readxl)
+library(dplyr)
+```
+
+# Data load
+```{r}
+# Read the Excel file
+file_path <- "Phys174_NVIVO.xlsx"
+data <- read_excel(file_path, sheet = "all")
+```
+
+# Data creation
+```{r}
+# Filter the data by grade group
+a_group <- data %>% filter(`grade group` == "A group")
+b_group <- data %>% filter(`grade group` == "B group")
+c_group <- data %>% filter(`grade group` == "C group")
+
+# Combine the reflections for each group
+a_group_confusing <- paste(na.omit(a_group$`confusing reflection`), 
+                           collapse = " ")
+b_group_confusing <- paste(na.omit(b_group$`confusing reflection`), 
+                           collapse = " ")
+c_group_confusing <- paste(na.omit(c_group$`confusing reflection`), 
+                           collapse = " ")
+
+a_group_interesting <- paste(na.omit(a_group$`interesting reflection`), 
+                             collapse = " ")
+b_group_interesting <- paste(na.omit(b_group$`interesting reflection`), 
+                             collapse = " ")
+c_group_interesting <- paste(na.omit(c_group$`interesting reflection`), 
+                             collapse = " ")
+
+# Create the final dataframe with six rows
+df_combined <- data.frame(
+    Type = c("A_group_Confusing", "B_group_Confusing", "C_group_Confusing",
+           "A_group_Interesting", "B_group_Interesting", "C_group_Interesting"),
+  Reflections = c(a_group_confusing, b_group_confusing, c_group_confusing,
+                  a_group_interesting, b_group_interesting, c_group_interesting),
+    stringsAsFactors = FALSE
+)
+```
+
+# Save as csv file
+```{r}
+write.csv(df_combined, file = "reflection_Kim.csv", row.names = FALSE)
+```
+
+# Check if the file was saved correctly
+```{r}
+df_cnew <- read.csv("reflection_Kim.csv", 
+                    header = TRUE, stringsAsFactors = FALSE)
+print(df_cnew)
+```
+
+# Count the number of non-missing confusing and interesting reflections for each group
+```{r}
+a_group_confusing_count <- sum(!is.na(a_group$`confusing reflection`))
+b_group_confusing_count <- sum(!is.na(b_group$`confusing reflection`))
+c_group_confusing_count <- sum(!is.na(c_group$`confusing reflection`))
+
+a_group_interesting_count <- sum(!is.na(a_group$`interesting reflection`))
+b_group_interesting_count <- sum(!is.na(b_group$`interesting reflection`))
+c_group_interesting_count <- sum(!is.na(c_group$`interesting reflection`))
+```
+
+
+# Create a table summarizing the number of reflections for each group and type
+```{r}
+reflection_count_table <- data.frame(
+  Group = c("A Group", "B Group", "C Group"),
+  Confusing_Reflections = c(a_group_confusing_count, 
+                            b_group_confusing_count, 
+                            c_group_confusing_count),
+  Interesting_Reflections = c(a_group_interesting_count, 
+                              b_group_interesting_count, 
+                              c_group_interesting_count)
+)
+
+print(reflection_count_table)
+```
+
+
+
+
+

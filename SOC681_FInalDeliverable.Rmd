@@ -1,0 +1,64 @@
+---
+title: "Practice"
+author: "Jiwon Kim"
+date: "2024-10-02"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load necessary libraries
+```{r}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(readr)
+```
+
+# Step 1: Read data from the CSV file
+```{r}
+df_liwc <- read_csv("SOC681_reflection_scoresOnly.csv")
+
+print(head(df_liwc)) # Check the structure and make sure it reads correctly
+```
+# Step 2: Transform data to long format
+```{r}
+df_long <- pivot_longer(df_liwc, cols = -Group, names_to = "Dictionary", values_to = "Score")
+```
+
+# Step 3: Calculate the difference between the highest and lowest scores for each category
+```{r}
+df_diff <- df_long %>%
+  group_by(Dictionary) %>%
+  summarize(Difference = max(Score) - min(Score)) %>%
+  arrange(desc(Difference)) # Sort by the biggest difference
+```
+
+# Step 4: Merge the difference information back to the long dataset
+```{r}
+df_long <- df_long %>%
+  left_join(df_diff, by = "Dictionary")
+```
+
+# Step 5: Plot the data, ordered by the size of the difference
+```{r}
+graph_1 <- ggplot(df_long, aes(x = reorder(Dictionary, -Difference), y = Score, fill = Group)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Comparison of LIWC Categories Across Groups",
+       x = "LIWC Category (Ordered by Difference)",
+       y = "Percentage Score") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 3.5)) # Reduce font size of x-axis labels
+
+
+graph_1
+```
+
+# Including Plots
+
+```{r pressure, echo=FALSE}
+#plot(pressure) 
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
